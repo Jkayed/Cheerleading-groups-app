@@ -1,0 +1,60 @@
+.find-meetup-background {
+  background-color: #fbce1a;
+  width: 100%;
+  min-height: 1000px;
+  height: 100%;
+}
+
+.find-meetup-div {
+  border-radius: 30px;
+  position: absolute;
+  background-color: white;
+  width: 80%;
+  min-height: 600px;
+  margin-top: 80px;
+  margin-left: 11%;
+}
+
+.find-group-header {
+  font-size: 30px;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.find-group-today {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.location-input {
+  width: 300px;
+}
+
+.search-button {
+  background-color: #ed6847;
+  width: 50%;
+  height: 50px;
+  border-radius: 30px;
+  margin-top: 40px;
+  margin-left: 320px;
+  font-weight: bold;
+  color: white;
+}
+
+.create-meetup-button {
+  background-color: #ed6847;
+  width: 200px;
+  height: 45px;
+  border-radius: 30px;
+  margin-top: 40px;
+  margin-bottom: 30px;
+  margin-left: 528px;
+  font-weight: bold;
+  color: white;
+}
+
+.create-meetup-label {
+  text-align: center;
+  margin-top: 70px;
+}

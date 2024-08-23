@@ -1,0 +1,26 @@
+.message-container {
+    display: flex;
+    flex-direction: column; /* This ensures messages stack vertically */
+    padding: 20px;
+    background-color: #fff;
+  }
+  
+  .message {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    max-width: 70%; /* Limiting message width */
+    word-wrap: break-word; /* Wrap long text */
+  }
+  
+  .sent {
+    background-color: #d1e7dd;
+    margin-left: auto; /* Aligns to the right */
+    text-align: right;
+  }
+  
+  .received {
+    background-color: #f8d7da;
+    margin-right: auto; /* Aligns to the left */
+    text-align: left;
+  }

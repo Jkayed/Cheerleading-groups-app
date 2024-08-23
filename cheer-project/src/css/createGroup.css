@@ -1,0 +1,55 @@
+.create-group-header {
+  margin-top: 40px;
+  font-size: 50px;
+  font-weight: 600;
+  text-align: center;
+}
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* Adjust the gap as needed */
+  margin-left: 500px;
+  margin-top: 60px;
+}
+
+.input-group {
+  display: flex;
+  gap: 12px; /* Adjust the gap as needed */
+}
+
+.create-group-double-input {
+  padding: 8px;
+  font-size: 14px;
+  border-width: 1px;
+  border-radius: 5px;
+  height: 35px;
+  width: 318px;
+}
+.create-group-input {
+  padding: 8px;
+  font-size: 14px;
+  border-width: 1px;
+  border-radius: 5px;
+  height: 35px;
+  width: 650px;
+}
+.create-group-textArea {
+  padding: 8px;
+  font-size: 14px;
+  border-width: 1px;
+  border-radius: 5px;
+  height: 105px;
+  width: 650px;
+  resize: none;
+}
+.submit {
+  background-color: #ed6847;
+  width: 200px;
+  height: 45px;
+  border-radius: 30px;
+  margin-top: 20px;
+  margin-left: 228px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 30px;
+}
