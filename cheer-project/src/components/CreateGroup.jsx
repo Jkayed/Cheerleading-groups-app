@@ -21,6 +21,7 @@ function CreateGroup() {
     lon: "",
   });
   // Function to handle form submission and send data to the backend
+  console.log(currentUser);
   async function handleSubmit(e) {
     e.preventDefault();
     try {
@@ -51,6 +52,7 @@ function CreateGroup() {
           zip: formData.groupZip,
           latitude: location.lat,
           longitude: location.lon,
+          memberID: "asd",
         });
         console.log("Data submitted successfully");
       } else {

@@ -1,68 +1,93 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import io from "socket.io-client";
-import "../../css/messagesPage.css";  // Import the CSS file
+import "../../css/messagesPage.css";
 import ConversationsTab from "./ConversationsTab";
 import { useAuth } from "../../contexts/authContext";
-const socket = io("http://localhost:3000");
 
 function MessagesPage() {
-    const { currentUser } = useAuth();
+  const { currentUser } = useAuth();
   const location = useLocation();
   const query = new URLSearchParams(location.search);
-  const receiverId ="yBHDHAaPUETDU6beAq4aGO3caTi2";  // This is the memberID of the receiver
-  const [currentUserId, setCurrentUserId] = useState(currentUser.uid);  // This is the memberID of the current user
+  const receiverId = query.get("receiverId");
+  const receiverName = query.get("receiverName"); // Get the receiverName from the URL query parameters
+  const [currentUserId] = useState(currentUser.uid);
   const [messages, setMessages] = useState([]);
   const [content, setContent] = useState("");
-console.log(receiverId)
+  const socketRef = useRef(null);
+
   useEffect(() => {
+    if (!socketRef.current) {
+      socketRef.current = io("http://localhost:3000");
+    }
+
+    const socket = socketRef.current;
+
     if (receiverId) {
       fetch(`http://localhost:3000/messages/${currentUserId}/${receiverId}`)
         .then((response) => response.json())
-        .then((data) => setMessages(data))
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setMessages(data);
+          } else {
+            console.error("Fetched data is not an array:", data);
+            setMessages([]);
+          }
+        })
         .catch((error) => console.error("Error fetching messages:", error));
 
-      socket.on("receiveMessage", (newMessage) => {
+      const handleReceiveMessage = (newMessage) => {
         if (
-          (newMessage.senderId === currentUserId && newMessage.receiverId === receiverId) ||
-          (newMessage.senderId === receiverId && newMessage.receiverId === currentUserId)
+          (newMessage.senderId === currentUserId &&
+            newMessage.receiverId === receiverId) ||
+          (newMessage.senderId === receiverId &&
+            newMessage.receiverId === currentUserId)
         ) {
           setMessages((prevMessages) => [...prevMessages, newMessage]);
         }
-      });
+      };
+
+      socket.on("receiveMessage", handleReceiveMessage);
 
       return () => {
-        socket.off("receiveMessage");
+        socket.off("receiveMessage", handleReceiveMessage);
       };
     }
-  }, [currentUserId, receiverId]);
+  }, [receiverId, currentUserId]);
 
-  const sendMessage = async () => {
-    const response = await fetch("http://localhost:3000/messages", {
+  const sendMessage = () => {
+    fetch("http://localhost:3000/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        senderId: currentUserId,  // Use memberID here
-        receiverId,               // Use memberID here
+        receiverId,
+        receiverName, // Include the receiverName in the POST request
+        senderId: currentUserId,
         content,
       }),
-    });
-
-    if (response.ok) {
-      setContent("");
-      // Emit the message via Socket.io
-      socket.emit("sendMessage", {
-        senderId: currentUserId,  // Use memberID here
-        receiverId,               // Use memberID here
-        content,
+    })
+      .then((response) => {
+        if (response.ok) {
+          setContent("");
+          // Remove the following block
+          // if (socketRef.current) {
+          //   socketRef.current.emit("sendMessage", {
+          //     senderId: currentUserId,
+          //     receiverId,
+          //     receiverName, // Include the receiverName in the socket emit
+          //     content,
+          //   });
+          // }
+        } else {
+          console.error("Failed to send message");
+        }
+      })
+      .catch((error) => {
+        console.error("Error in sending message:", error);
       });
-    } else {
-      console.error("Failed to send message");
-    }
   };
-
   return (
     <div className="messages-page">
       <ConversationsTab currentUserId={currentUserId} />
@@ -70,8 +95,10 @@ console.log(receiverId)
         {messages.length > 0
           ? messages.map((message) => (
               <div
-                key={message._id}  // Assuming _id is still used as the unique message identifier in your database
-                className={message.senderId === currentUserId ? "sent" : "received"}
+                key={message._id}
+                className={
+                  message.senderId === currentUserId ? "sent" : "received"
+                }
               >
                 <div className="message">
                   <p>{message.content}</p>

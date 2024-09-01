@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import {
-  Button,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
   Table,
   TableHeader,
   TableColumn,
@@ -34,10 +29,9 @@ const columns = [
 function GroupDetails({ groupId, onClose }) {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch the group members when the component mounts
     fetch(`http://localhost:3000/groups/${groupId}/members`)
       .then((response) => response.json())
       .then((data) => {
@@ -50,9 +44,8 @@ function GroupDetails({ groupId, onClose }) {
       });
   }, [groupId]);
 
-  const handleMessageClick = (memberId) => {
-    // Redirect to /messages with the memberId as a query parameter
-    navigate(`/messages?receiverId=${memberId}`);
+  const handleMessageClick = (memberId, firstName) => {
+    navigate(`/messages?receiverId=${memberId}&receiverName=${encodeURIComponent(firstName)}`);
   };
 
   const renderCell = React.useCallback((member, columnKey) => {
@@ -99,7 +92,7 @@ function GroupDetails({ groupId, onClose }) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className="icon icon-tabler icons-tabler-outline icon-tabler-message"
-                onClick={() => handleMessageClick(member.memberID)} // Use memberID here
+                onClick={() => handleMessageClick(member.memberID, member.firstName)}
               >
                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                 <path d="M8 9h8" />
@@ -115,54 +108,24 @@ function GroupDetails({ groupId, onClose }) {
   }, [navigate]);
 
   return (
-    <ModalContent>
-      {members.length > 0 ? (
-        <>
-          <ModalHeader className="flex flex-col gap-1 text-center w-92 mt-60">
-            Group Members
-          </ModalHeader>
-          <ModalBody>
-            {loading ? (
-              <p>Loading...</p>
-            ) : (
-              <Table
-                aria-label="Example table with custom cells"
-                className="w-full"
-              >
-                <TableHeader columns={columns}>
-                  {(column) => (
-                    <TableColumn
-                      key={column.uid}
-                      align={column.uid === "actions" ? "center" : "start"}
-                    >
-                      {column.name}
-                    </TableColumn>
-                  )}
-                </TableHeader>
-                <TableBody items={members}>
-                  {(item) => (
-                    <TableRow key={item.memberID}>
-                      {(columnKey) => (
-                        <TableCell>{renderCell(item, columnKey)}</TableCell>
-                      )}
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </ModalBody>
-        </>
-      ) : (
-        <>
-          <ModalHeader className="flex flex-col gap-1 text-center w-92 mt-60">
-            Group Members
-          </ModalHeader>
-          <h2 className="flex flex-col gap-1 text-center w-92 m-auto">
-            No members
-          </h2>
-        </>
-      )}
-    </ModalContent>
+    <div>
+      <Table>
+        <TableHeader columns={columns}>
+          {(column) => (
+            <TableColumn key={column.uid} align={column.uid === "actions" ? "center" : "start"}>
+              {column.name}
+            </TableColumn>
+          )}
+        </TableHeader>
+        <TableBody items={members}>
+          {(item) => (
+            <TableRow key={item.memberID}>
+              {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 

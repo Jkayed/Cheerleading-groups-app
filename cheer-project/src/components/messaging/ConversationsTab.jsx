@@ -1,36 +1,44 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function ConversationsTab({ currentUserId }) {
-  const [conversations, setConversations] = useState([]);
+const ConversationsTab = ({ currentUserId }) => {
+  const [recentConversations, setRecentConversations] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch(`http://localhost:3000/users/conversations/${currentUserId}`)
+    fetch(`http://localhost:3000/recent-conversations/${currentUserId}`)
       .then((response) => response.json())
       .then((data) => {
-        console.log('Fetched data:', data); // Log the fetched data
-        setConversations(data);
+        console.log("Fetched conversations:", data);
+        setRecentConversations(data);
       })
-      .catch((error) => console.error("Error fetching conversations:", error));
+      .catch((error) => console.error("Error fetching recent conversations:", error));
   }, [currentUserId]);
-console.log(conversations)
-  const openConversation = (receiverId) => {
+
+  const handleConversationClick = (receiverId) => {
+    console.log("Clicked receiverId:", receiverId);
     navigate(`/messages?receiverId=${receiverId}`);
   };
 
   return (
-    <div className="conversations-tab">
+    <div className="recent-conversations">
       <h3>Recent Conversations</h3>
       <ul>
-        {conversations.map((conversation) => (
-          <li key={conversation._id} onClick={() => openConversation(conversation._id)}>
-            {conversation.name} {/* Assuming 'name' is the user's name */}
+        {recentConversations.map((conversation) => (
+          <li
+        
+            onClick={() => handleConversationClick(conversation.receiverId)}
+          >
+            <div className="conversation-item">
+              <strong>{conversation.receiverName}</strong>
+              <p>{conversation.lastMessage}</p>
+              <small>{new Date(conversation.timestamp).toLocaleString()}</small>
+            </div>
           </li>
         ))}
       </ul>
     </div>
   );
-}
+};
 
 export default ConversationsTab;

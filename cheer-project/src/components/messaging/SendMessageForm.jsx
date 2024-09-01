@@ -3,8 +3,8 @@ import React, { useState } from "react";
 function SendMessageForm({ senderId, receiverId }) {
   const [content, setContent] = useState("");
 
-  const sendMessage = async () => {
-    const response = await fetch("http://localhost:3000/messages", {
+  const sendMessage = () => {
+    const response = fetch("http://localhost:3000/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

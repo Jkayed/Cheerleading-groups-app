@@ -11,17 +11,18 @@ import {
   Input,
   Textarea,
 } from "@nextui-org/react";
-
+import { useAuth } from "../contexts/authContext";
 function ShowLocalGroups({ groups }) {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
-
+  const { currentUser } = useAuth();
   // Function to handle the "Request to Join" action
+  console.log(currentUser)
   const handleRequestToJoin = (groupId) => {
     console.log(groupId);
     // Hard-coded member data
     const newMember = {
-      memberID: "hardcodedID",
-      firstName: "Hardcoded",
+      memberID: currentUser.uid,
+      firstName: currentUser.email,
       lastName: "User",
       email: "hardcodeduser@example.com",
       phone: "123-456-7890",
