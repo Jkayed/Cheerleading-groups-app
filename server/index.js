@@ -1,10 +1,10 @@
 const express = require("express");
-const http = require("http"); // Import http to create a server
+const http = require("http");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
-const { Server } = require("socket.io"); // Import Server from socket.io
-const ObjectId = mongoose.Types.ObjectId;
+const { Server } = require("socket.io");
+
 const app = express();
 const port = 3000;
 
@@ -34,6 +34,10 @@ const memberSchema = new mongoose.Schema({
   role: String,
 });
 
+const requestSchema = new mongoose.Schema({
+  memberID: String,
+});
+
 const contactSchema = new mongoose.Schema({
   ownerID: String,
   firstName: String,
@@ -49,19 +53,25 @@ const contactSchema = new mongoose.Schema({
   latitude: String,
   longitude: String,
   members: [memberSchema],
+  requests: [requestSchema],
+  memberID: String,
 });
 
 const Message = mongoose.model(
   "Message",
   new mongoose.Schema({
     senderId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "Contact",
       required: true,
     },
     receiverId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "Contact",
+      required: true,
+    },
+    receiverName: {
+      type: String,
       required: true,
     },
     content: { type: String, required: true },
@@ -90,7 +100,6 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("A user connected");
 
-  // Listen for messages
   socket.on("sendMessage", async (messageData) => {
     try {
       const message = new Message(messageData);
@@ -112,29 +121,31 @@ io.on("connection", (socket) => {
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
+
 app.get("/users/conversations/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const userObjectId = ObjectId(userId); // Convert userId to ObjectId
     const messages = await Message.find({
-      $or: [{ senderId: userObjectId }, { receiverId: userObjectId }],
+      $or: [{ senderId: userId }, { receiverId: userId }],
     });
 
-    // Extract unique user IDs involved in conversations
     const userIds = new Set();
     messages.forEach((msg) => {
-      if (msg.senderId.toString() !== userId) userIds.add(msg.senderId);
-      if (msg.receiverId.toString() !== userId) userIds.add(msg.receiverId);
+      if (msg.senderId !== userId) userIds.add(msg.senderId);
+      if (msg.receiverId !== userId) userIds.add(msg.receiverId);
     });
 
-    const users = await Contact.find({ _id: { $in: Array.from(userIds) } });
+    const users = await Contact.find({
+      memberID: { $in: Array.from(userIds) },
+    });
 
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: "Error fetching conversations", error });
   }
 });
+
 app.post("/contact", async (req, res) => {
   try {
     const {
@@ -151,6 +162,7 @@ app.post("/contact", async (req, res) => {
       zip,
       latitude,
       longitude,
+      memberID,
     } = req.body;
 
     if (!ownerID || !firstName || !lastName || !email || !phone || !groupName) {
@@ -171,8 +183,8 @@ app.post("/contact", async (req, res) => {
       zip,
       latitude,
       longitude,
+      memberID,
     });
-
     await contact.save();
     res.status(201).json(contact);
   } catch (err) {
@@ -182,6 +194,99 @@ app.post("/contact", async (req, res) => {
       .json({ message: "Error creating contact", error: err.message });
   }
 });
+
+// Route to request to join a group
+app.post("/groups/:groupId/request", async (req, res) => {
+  try {
+    const { groupId } = req.params;  // Correctly extract groupId from req.params
+    const { memberID } = req.body;
+
+    console.log(`Received request to join group ${groupId} with memberID ${memberID}`);
+
+    // Convert groupId to a valid ObjectId using 'new'
+    const groupObjectId = new mongoose.Types.ObjectId(groupId);
+
+    // Find the group by its ID
+    const group = await Contact.findById(groupObjectId);
+
+    if (!group) {
+      console.error(`Group with ID ${groupId} not found`);
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    // Create a new request
+    const newRequest = { memberID };
+
+    // Add the request to the group's requests array
+    group.requests.push(newRequest);
+
+    // Save the updated group
+    await group.save();
+
+    res.status(200).json({ message: "Request to join group sent successfully", group });
+  } catch (error) {
+    console.error("Error processing join request:", error);
+    res.status(500).json({ message: "An error occurred on the server", error });
+  }
+});
+app.get("/recent-conversations/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const sentMessages = await Message.aggregate([
+      { $match: { senderId: userId } },
+      {
+        $group: {
+          _id: "$receiverId",
+          lastMessage: { $last: "$content" },
+          timestamp: { $last: "$timestamp" },
+          receiverName: { $last: "$receiverName" },
+        },
+      },
+    ]);
+
+    const receivedMessages = await Message.aggregate([
+      { $match: { receiverId: userId } },
+      {
+        $group: {
+          _id: "$senderId",
+          lastMessage: { $last: "$content" },
+          timestamp: { $last: "$timestamp" },
+          receiverName: { $last: "$receiverName" },
+        },
+      },
+    ]);
+
+    const allConversations = [...sentMessages, ...receivedMessages];
+    allConversations.sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    );
+
+    const recentUserIds = allConversations.map((conv) => conv._id);
+
+    const users = await Contact.find({ memberID: { $in: recentUserIds } });
+
+    const recentConversations = allConversations.map((conv) => {
+      const user = users.find((u) => u.memberID === conv._id);
+
+      return {
+        receiverId: user ? user.memberID : conv._id,
+        receiverName: conv.receiverName,
+        lastMessage: conv.lastMessage,
+        timestamp: conv.timestamp,
+      };
+    });
+
+    res.json(recentConversations);
+  } catch (error) {
+    console.error("Error fetching recent conversations:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching recent conversations", error });
+  }
+});
+// Route to handle join requests for a specific group
+
 app.post("/groups/:groupId/add-member", async (req, res) => {
   const { groupId } = req.params;
   const newMember = req.body;
@@ -223,19 +328,23 @@ app.get("/groups", async (req, res) => {
   }
 });
 
-// Messaging routes
 app.post("/messages", async (req, res) => {
-  const { senderId, receiverId, content } = req.body;
+  const { senderId, receiverId, content, receiverName } = req.body;
 
   try {
-    const message = new Message({ senderId, receiverId, content });
+    const message = new Message({
+      senderId,
+      receiverId,
+      content,
+      receiverName,
+    });
     await message.save();
-    res.status(201).json(message);
 
-    // Emit the message via Socket.io
     io.emit("receiveMessage", message);
+
+    res.status(201).send(message);
   } catch (error) {
-    res.status(500).json({ message: "Error sending message", error });
+    res.status(500).send({ message: "Error saving message", error });
   }
 });
 
@@ -248,17 +357,15 @@ app.get("/messages/:userId1/:userId2", async (req, res) => {
         { senderId: userId1, receiverId: userId2 },
         { senderId: userId2, receiverId: userId1 },
       ],
-    }).sort("timestamp");
+    }).sort({ timestamp: 1 });
 
-    res.json(messages);
+    res.status(200).send(messages);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching messages", error });
+    res.status(500).send({ message: "Error fetching messages", error });
   }
 });
 
-// Get recent conversations for the current user
-
 // Start the server
 server.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });
